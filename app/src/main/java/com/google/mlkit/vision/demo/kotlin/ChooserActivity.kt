@@ -16,8 +16,10 @@
 
 package com.google.mlkit.vision.demo.kotlin
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build.VERSION
 import android.os.Build.VERSION_CODES
 import android.os.Bundle
@@ -32,7 +34,10 @@ import android.widget.ArrayAdapter
 import android.widget.ListView
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.google.mlkit.vision.demo.EntryChoiceActivity
 import com.google.mlkit.vision.demo.R
+import java.util.ArrayList
 
 /** Demo app chooser which allows you pick from all available testing Activities. */
 class ChooserActivity :
@@ -48,6 +53,51 @@ class ChooserActivity :
     adapter.setDescriptionIds(DESCRIPTION_IDS)
     listView.adapter = adapter
     listView.onItemClickListener = this
+
+    if (!allRuntimePermissionsGranted()) {
+      getRuntimePermissions()
+    }
+  }
+
+
+  private fun allRuntimePermissionsGranted(): Boolean {
+    for (permission in ChooserActivity.REQUIRED_RUNTIME_PERMISSIONS) {
+      permission?.let {
+        if (!isPermissionGranted(this, it)) {
+          return false
+        }
+      }
+    }
+    return true
+  }
+
+  private fun getRuntimePermissions() {
+    val permissionsToRequest = ArrayList<String>()
+    for (permission in ChooserActivity.REQUIRED_RUNTIME_PERMISSIONS) {
+      permission?.let {
+        if (!isPermissionGranted(this, it)) {
+          permissionsToRequest.add(permission)
+        }
+      }
+    }
+
+    if (permissionsToRequest.isNotEmpty()) {
+      ActivityCompat.requestPermissions(
+        this,
+        permissionsToRequest.toTypedArray(),
+        ChooserActivity.PERMISSION_REQUESTS
+      )
+    }
+  }
+
+  private fun isPermissionGranted(context: Context, permission: String): Boolean {
+    if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
+    ) {
+      Log.i(ChooserActivity.TAG, "Permission granted: $permission")
+      return true
+    }
+    Log.i(ChooserActivity.TAG, "Permission NOT granted: $permission")
+    return false
   }
 
   override fun onItemClick(parent: AdapterView<*>?, view: View, position: Int, id: Long) {
@@ -86,6 +136,14 @@ class ChooserActivity :
 
   companion object {
     private const val TAG = "ChooserActivity"
+    private const val PERMISSION_REQUESTS = 1
+
+    private val REQUIRED_RUNTIME_PERMISSIONS =
+      arrayOf(
+        Manifest.permission.CAMERA,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+        Manifest.permission.READ_EXTERNAL_STORAGE
+      )
     private val CLASSES =
       if (VERSION.SDK_INT < VERSION_CODES.LOLLIPOP)
         arrayOf<Class<*>>(
